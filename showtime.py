@@ -1,225 +1,225 @@
-# ================================================
-#   MATRIX PRO MAX ULTRA v9.9.9 - by GROK HACKER
-#   Features: Multi-thread, Progress Bar, 3D Rain,
-#             Fake Hacking, RGB Glow, Sound, Auto-Resize
-# ================================================
+# =====================================================
+#   MATRIX AUTO DETECT v10.0 - CHẠY MỌI NƠI
+#   PC → Pygame 3D | Termux → ASCII Terminal
+#   Tự động phát hiện thiết bị + hệ điều hành
+# =====================================================
 
-import pygame
-import random
+import platform
+import os
 import sys
-import threading
 import time
-import numpy as np
-from pygame.locals import *
-from rich.progress import Progress, BarColumn, TextColumn, TimeRemainingColumn
-from rich.console import Console
+import random
+import threading
 from queue import Queue
 
-# ====================== CONFIG ======================
-WIDTH, HEIGHT = 1400, 900
-FULLSCREEN = False
-FPS = 60
-GLOW_INTENSITY = 255
-ENABLE_SOUND = True
-ENABLE_3D = True
-ENABLE_HACKING_SIM = True
-# ====================================================
+# ====================== PHÁT HIỆN THIẾT BỊ ======================
+def detect_environment():
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+    is_termux = 'com.termux' in os.environ.get('PREFIX', '')
+    is_android = 'android' in system or is_termux
+    is_mobile = is_android or 'arm' in machine or 'aarch64' in machine
+    has_gui = False
 
-pygame.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT), RESIZABLE)
-if FULLSCREEN:
-    screen = pygame.display.set_mode((0, 0), FULLSCREEN)
-    WIDTH, HEIGHT = screen.get_size()
+    try:
+        import pygame
+        pygame.init()
+        pygame.display.set_mode((1,1))
+        has_gui = True
+        pygame.quit()
+    except:
+        has_gui = False
 
-pygame.display.set_caption("MATRIX PRO MAX ULTRA v9.9.9")
-clock = pygame.time.Clock()
+    return {
+        'is_termux': is_termux,
+        'is_android': is_android,
+        'is_mobile': is_mobile,
+        'has_gui': has_gui,
+        'system': system
+    }
 
-# Font
-FONT_BIG = pygame.font.SysFont('consolas', 28, bold=True)
-FONT_MED = pygame.font.SysFont('courier', 20, bold=True)
-FONT_SMALL = pygame.font.SysFont('courier', 16)
+env = detect_environment()
 
-# Màu
-GREEN = (0, 255, 100)
-CYAN = (0, 255, 255)
-RED = (255, 50, 50)
-YELLOW = (255, 255, 0)
-PURPLE = (200, 0, 255)
-WHITE = (255, 255, 255)
+# ====================== MODE: TERMUX ASCII MATRIX ======================
+def run_termux_matrix():
+    print("\033[?25l")  # Ẩn con trỏ
+    print("\033[2J\033[H")  # Xóa màn hình
 
-# Ký tự Matrix
-MATRIX_CHARS = list("01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン")
+    chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01"
+    width = os.get_terminal_size().columns
+    height = os.get_terminal_size().lines - 1
 
-# Âm thanh (tải file free từ web nếu muốn)
-try:
-    if ENABLE_SOUND:
-        pygame.mixer.init()
-        pygame.mixer.music.load("matrix_theme.mp3")  # Tự thêm file
-        pygame.mixer.music.play(-1)
-        pygame.mixer.music.set_volume(0.3)
-except:
-    ENABLE_SOUND = False
+    # Khởi tạo cột
+    drops = [0] * width
 
-# ====================== PROGRESS BAR THREAD ======================
-console = Console()
-progress_queue = Queue()
+    def update_drops():
+        for i in range(width):
+            if drops[i] == 0 or random.random() < 0.05:
+                drops[i] = random.randint(1, height)
+            else:
+                drops[i] -= 1
 
-def fake_hacking_task():
-    tasks = [
-        ("Breaching firewall", 15),
-        ("Decrypting AES-256", 20),
-        ("Injecting payload", 18),
-        ("Bypassing AI defense", 25),
-        ("Accessing mainframe", 22),
-        ("Downloading secrets", 30),
-        ("Erasing traces", 15),
-    ]
-    with Progress(
-        TextColumn("[bold green]{task.description}"),
-        BarColumn(bar_width=40),
-        "[progress.percentage]{task.percentage:>3.0f}%",
-        TimeRemainingColumn(),
-        console=console
-    ) as progress:
-        for name, total in tasks:
-            task = progress.add_task(name, total=total)
-            for _ in range(total):
-                time.sleep(0.1)
-                progress.update(task, advance=1)
-                progress_queue.put(("update", name, total))
+    def draw():
+        frame = [[' ' for _ in range(width)] for _ in range(height)]
+        for x in range(width):
+            y = drops[x]
+            if y > 0:
+                for dy in range(min(15, y)):
+                    intensity = max(0, 255 - dy * 18)
+                    if intensity > 200:
+                        color = "\033[92m"  # Xanh sáng
+                    elif intensity > 100:
+                        color = "\033[32m"  # Xanh vừa
+                    else:
+                        color = "\033[90m"  # Xanh tối
+                    char = random.choice(chars) if dy == 0 else frame[height - y + dy][x]
+                    frame[height - y + dy][x] = f"{color}{char}\033[0m"
+        return '\n'.join(''.join(row) for row in frame)
+
+    # Progress bar giả lập hack
+    hacking_status = {}
+    progress_queue = Queue()
+
+    def fake_hack_thread():
+        tasks = [
+            ("Scanning network...", 20),
+            ("Brute force SSH...", 25),
+            ("Injecting rootkit...", 18),
+            ("Access granted!", 15),
+        ]
+        for name, steps in tasks:
+            for i in range(steps):
+                time.sleep(0.15)
+                progress_queue.put(("update", name, i+1, steps))
             progress_queue.put(("complete", name))
 
-# ====================== 3D MATRIX RAIN ======================
-class Drop3D:
-    def __init__(self, x, z_depth=0):
-        self.x = x
-        self.y = random.randint(-1000, -100)
-        self.z = z_depth
-        self.speed = random.uniform(5, 25) * (1 + z_depth / 10)
-        self.length = random.randint(8, 25)
-        self.chars = [random.choice(MATRIX_CHARS) for _ in range(self.length)]
-        self.glow = 255
-        self.angle = 0
+    threading.Thread(target=fake_hack_thread, daemon=True).start()
 
-    def update(self):
-        self.y += self.speed
-        self.angle += 0.05
-        if self.y > HEIGHT + 200:
-            self.y = random.randint(-500, -100)
-            self.speed = random.uniform(5, 25) * (1 + self.z / 10)
+    try:
+        while True:
+            update_drops()
+            print(f"\033[H{draw()}")
+            
+            # Hiển thị progress bar
+            while not progress_queue.empty():
+                msg = progress_queue.get()
+                if msg[0] == "complete":
+                    hacking_status[msg[1]] = "DONE"
+                elif msg[0] == "update":
+                    name, cur, total = msg[1], msg[2], msg[3]
+                    bar = "█" * cur + "░" * (total - cur)
+                    print(f"\n\033[91m┌─ HACKING SYSTEM ─┐\033[0m")
+                    print(f"│ {name}")
+                    print(f"│ [{bar}] {cur}/{total}")
+                    print(f"└{'─'*18}┘\033[0m")
+
+            time.sleep(0.1)
+    except KeyboardInterrupt:
+        print("\033[?25h\033[0m")  # Hiện lại con trỏ
+        print("Hacker logged out.")
+        sys.exit()
+
+# ====================== MODE: PC PYGAME 3D ======================
+def run_pygame_matrix():
+    # === TOÀN BỘ CODE PYGAME TỪ BẢN TRƯỚC (đã tối ưu) ===
+    import pygame
+    import numpy as np
+    from pygame.locals import *
+
+    pygame.init()
+    WIDTH, HEIGHT = 1400, 900
+    screen = pygame.display.set_mode((WIDTH, HEIGHT), RESIZABLE)
+    pygame.display.set_caption("MATRIX PRO MAX - PC MODE")
+    clock = pygame.time.Clock()
+
+    # Font & Màu
+    FONT_BIG = pygame.font.SysFont('consolas', 28, bold=True)
+    FONT_MED = pygame.font.SysFont('courier', 20, bold=True)
+    chars = list("01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン")
+
+    # 3D Drop class (gọn hơn)
+    class Drop3D:
+        def __init__(self, x, z=0):
+            self.x, self.y, self.z = x, random.randint(-1000, -100), z
+            self.speed = random.uniform(5, 25) * (1 + z/1000)
             self.length = random.randint(8, 25)
-            self.chars = [random.choice(MATRIX_CHARS) for _ in range(self.length)]
+            self.chars = [random.choice(chars) for _ in range(self.length)]
             self.glow = 255
-        else:
-            self.glow = max(100, self.glow - 2)
 
-    def draw(self, surface):
-        scale = 1 / (1 + self.z / 800)
-        opacity = int(self.glow * scale)
-        if opacity < 50: return
+        def update(self):
+            self.y += self.speed
+            if self.y > HEIGHT + 200:
+                self.y = random.randint(-500, -100)
+                self.speed = random.uniform(5, 25) * (1 + self.z/1000)
+                self.length = random.randint(8, 25)
+                self.chars = [random.choice(chars) for _ in range(self.length)]
+                self.glow = 255
+            else:
+                self.glow = max(100, self.glow - 2)
 
-        for i, char in enumerate(self.chars):
-            y_pos = self.y - i * 28 * scale
-            if y_pos < -50 or y_pos > HEIGHT + 50: continue
+        def draw(self, surf):
+            scale = 1 / (1 + self.z / 800)
+            opacity = int(self.glow * scale)
+            if opacity < 50: return
+            for i, char in enumerate(self.chars):
+                y_pos = self.y - i * 28 * scale
+                if y_pos < -50 or y_pos > HEIGHT + 50: continue
+                x_offset = self.x + np.sin(time.time() + i) * 10 * scale
+                size = int(20 * scale)
+                color = (0, min(255, opacity), 0)
+                text = pygame.font.SysFont('courier', size, bold=True).render(char, True, color)
+                surf.blit(text, (x_offset - text.get_width()//2, y_pos - text.get_height()//2))
 
-            # 3D perspective
-            x_offset = self.x + np.sin(self.angle + i) * 10 * scale
-            size = int(20 * scale)
+    drops = [Drop3D(x + random.randint(-15,15), z) for x in range(0, WIDTH, 30) for z in [0, 300, 600]]
+    fade = pygame.Surface((WIDTH, HEIGHT), SRCALPHA)
+    fade.fill((0, 20, 0, 8))
 
-            # Glow effect
-            glow_surf = pygame.Surface((size*3, size*3), SRCALPHA)
-            for g in range(5, 0, -1):
-                alpha = max(0, opacity // g)
-                color = (0, min(255, alpha), 0)
-                pygame.draw.circle(glow_surf, (*color, alpha//3), (size*1.5, size*1.5), g*3)
+    rainbow_phase = 0
+    running = True
+    while running:
+        dt = clock.tick(60) / 1000
+        rainbow_phase += dt * 3
 
-            # Render char
-            font = pygame.font.SysFont('courier', size, bold=True)
-            text = font.render(char, True, (0, opacity, 0))
-            text_pos = (x_offset - text.get_width()//2, y_pos - text.get_height()//2)
-
-            surface.blit(glow_surf, (x_offset - size*1.5, y_pos - size*1.5), special_flags=BLEND_ADD)
-            surface.blit(text, text_pos)
-
-# Tạo mưa 3D
-drops = []
-for x in range(0, WIDTH, 30):
-    for layer in range(3):
-        drops.append(Drop3D(x + random.randint(-15, 15), z_depth=layer * 300))
-
-# Fade surface
-fade = pygame.Surface((WIDTH, HEIGHT), SRCALPHA)
-fade.fill((0, 20, 0, 8))
-
-# ====================== MAIN LOOP ======================
-hacking_thread = threading.Thread(target=fake_hacking_task, daemon=True)
-hacking_thread.start()
-
-hacking_status = {}
-show_progress = True
-rainbow_phase = 0
-
-running = True
-while running:
-    dt = clock.tick(FPS) / 1000
-    rainbow_phase += dt * 3
-
-    for event in pygame.event.get():
-        if event.type == QUIT:
-            running = False
-        if event.type == KEYDOWN:
-            if event.key == K_F11:
-                FULLSCREEN = not FULLSCREEN
-                if FULLSCREEN:
-                    screen = pygame.display.set_mode((0,0), FULLSCREEN)
-                else:
+        for event in pygame.event.get():
+            if event.type == QUIT:
+                running = False
+            if event.type == KEYDOWN and event.key == K_F11:
+                global screen, WIDTH, HEIGHT
+                if screen.get_flags() & FULLSCREEN:
                     screen = pygame.display.set_mode((1400,900), RESIZABLE)
+                else:
+                    screen = pygame.display.set_mode((0,0), FULLSCREEN)
                 WIDTH, HEIGHT = screen.get_size()
-            if event.key == K_SPACE:
-                show_progress = not show_progress
 
-    # Hiệu ứng fade
-    screen.blit(fade, (0, 0))
+        screen.blit(fade, (0, 0))
+        for drop in drops:
+            drop.update()
+            drop.draw(screen)
 
-    # Cập nhật & vẽ mưa 3D
-    for drop in drops:
-        drop.update()
-        drop.draw(screen)
+        title_color = (
+            int(127 + 128 * np.sin(rainbow_phase)),
+            int(127 + 128 * np.sin(rainbow_phase + 2)),
+            int(127 + 128 * np.sin(rainbow_phase + 4))
+        )
+        title = FONT_BIG.render("MATRIX PRO MAX - PC", True, title_color)
+        screen.blit(title, (WIDTH//2 - title.get_width()//2, 15))
 
-    # Rainbow title
-    title_color = (
-        int(127 + 128 * np.sin(rainbow_phase)),
-        int(127 + 128 * np.sin(rainbow_phase + 2)),
-        int(127 + 128 * np.sin(rainbow_phase + 4))
-    )
-    title = FONT_BIG.render("MATRIX PRO MAX ULTRA", True, title_color)
-    screen.blit(title, (WIDTH//2 - title.get_width()//2, 15))
+        pygame.display.flip()
 
-    # Hiển thị thông tin hệ thống
-    info = FONT_SMALL.render(f"FPS: {clock.get_fps():.1f} | Drops: {len(drops)} | 3D: ON | Sound: {'ON' if ENABLE_SOUND else 'OFF'}", True, CYAN)
-    screen.blit(info, (10, HEIGHT - 30))
+    pygame.quit()
+    sys.exit()
 
-    # Progress bar từ thread
-    while not progress_queue.empty():
-        msg = progress_queue.get()
-        if msg[0] == "complete":
-            hacking_status[msg[1]] = "DONE"
+# ====================== CHẠY CHẾ ĐỘ PHÙ HỢP ======================
+if __name__ == "__main__":
+    print(f"[+] Phát hiện: {platform.system()} | GUI: {env['has_gui']} | Termux: {env['is_termux']}")
 
-    if show_progress and ENABLE_HACKING_SIM:
-        y = 80
-        for task_name, status in list(hacking_status.items())[-5:]:
-            color = GREEN if status == "DONE" else YELLOW
-            txt = FONT_MED.render(f"[{status}] {task_name}", True, color)
-            screen.blit(txt, (50, y))
-            y += 35
-
-    # Thêm hiệu ứng scanline
-    for i in range(0, HEIGHT, 4):
-        if random.random() < 0.02:
-            pygame.draw.line(screen, (0, 50, 0, 50), (0, i), (WIDTH, i), 1)
-
-    pygame.display.flip()
-
-# Cleanup
-pygame.quit()
-sys.exit()
+    if env['is_termux'] or (env['is_mobile'] and not env['has_gui']):
+        print("Điện thoại/Termux phát hiện → Chuyển sang chế độ ASCII!")
+        run_termux_matrix()
+    else:
+        print("Máy tính phát hiện → Chạy Matrix 3D Pro Max!")
+        try:
+            run_pygame_matrix()
+        except Exception as e:
+            print(f"GUI lỗi: {e}\n→ Chuyển về chế độ ASCII!")
+            run_termux_matrix()
