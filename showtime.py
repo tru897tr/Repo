@@ -1,36 +1,54 @@
 # =====================================================
-#   MATRIX AUTO DETECT v10.0 - CHẠY MỌI NƠI
-#   PC → Pygame 3D | Termux → ASCII Terminal
-#   Tự động phát hiện thiết bị + hệ điều hành
+#   MATRIX AUTO v11.0 - SIÊU MƯỢT, KHÔNG LỖI
+#   + Hiệu ứng loading "Đang xác định thiết bị..."
+#   + Tự động chuyển chế độ
+#   + Không lỗi import *
 # =====================================================
 
-import platform
 import os
 import sys
 import time
 import random
 import threading
+import platform
 from queue import Queue
+
+# ====================== HIỆU ỨNG LOADING NGẦU ======================
+def loading_animation(text, duration=3):
+    chars = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+    end_time = time.time() + duration
+    i = 0
+    while time.time() < end_time:
+        sys.stdout.write(f"\r\033[92m{chars[i % len(chars)]}\033[0m \033[1;36m{text}\033[0m")
+        sys.stdout.flush()
+        time.sleep(0.1)
+        i += 1
+    print(f"\r\033[92m✔\033[0m \033[1;36m{text} DONE!\033[0m")
 
 # ====================== PHÁT HIỆN THIẾT BỊ ======================
 def detect_environment():
+    print("\n" + "="*50)
+    loading_animation("Đang quét hệ điều hành...", 1.5)
+    loading_animation("Phát hiện CPU & kiến trúc...", 1.5)
+    loading_animation("Kiểm tra môi trường GUI...", 2)
+
     system = platform.system().lower()
     machine = platform.machine().lower()
     is_termux = 'com.termux' in os.environ.get('PREFIX', '')
     is_android = 'android' in system or is_termux
     is_mobile = is_android or 'arm' in machine or 'aarch64' in machine
-    has_gui = False
 
+    has_gui = False
     try:
         import pygame
         pygame.init()
-        pygame.display.set_mode((1,1))
-        has_gui = True
+        pygame.display.set_mode((1,1), pygame.NOFRAME)
         pygame.quit()
+        has_gui = True
     except:
         has_gui = False
 
-    return {
+    env = {
         'is_termux': is_termux,
         'is_android': is_android,
         'is_mobile': is_mobile,
@@ -38,106 +56,126 @@ def detect_environment():
         'system': system
     }
 
-env = detect_environment()
+    # In kết quả ngầu
+    print("\n\033[1;33m╔════════════════ KẾT QUẢ PHÁT HIỆN ════════════════╗\033[0m")
+    print(f"║ Hệ điều hành : \033[1;36m{platform.system():<15}\033[0m                  ║")
+    print(f"║ Thiết bị     : \033[1;36m{'ĐIỆN THOẠI' if is_mobile else 'MÁY TÍNH':<15}\033[0m              ║")
+    print(f"║ Termux       : \033[1;36m{'CÓ' if is_termux else 'KHÔNG':<15}\033[0m                 ║")
+    print(f"║ GUI (pygame) : \033[1;36m{'SẴN SÀNG' if has_gui else 'KHÔNG HỖ TRỢ':<15}\033[0m            ║")
+    print("\033[1;33m╚═══════════════════════════════════════════════════╝\033[0m\n")
+    time.sleep(1)
 
-# ====================== MODE: TERMUX ASCII MATRIX ======================
-def run_termux_matrix():
+    return env
+
+# ====================== CHẾ ĐỘ TERMUX: ASCII MATRIX ======================
+def run_ascii_matrix():
+    os.system('clear') if os.name == 'posix' else os.system('cls')
     print("\033[?25l")  # Ẩn con trỏ
-    print("\033[2J\033[H")  # Xóa màn hình
+    chars = "01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン"
+    
+    try:
+        width = os.get_terminal_size().columns
+        height = os.get_terminal_size().lines - 3
+    except:
+        width, height = 80, 24
 
-    chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01"
-    width = os.get_terminal_size().columns
-    height = os.get_terminal_size().lines - 1
-
-    # Khởi tạo cột
     drops = [0] * width
-
-    def update_drops():
-        for i in range(width):
-            if drops[i] == 0 or random.random() < 0.05:
-                drops[i] = random.randint(1, height)
-            else:
-                drops[i] -= 1
-
-    def draw():
-        frame = [[' ' for _ in range(width)] for _ in range(height)]
-        for x in range(width):
-            y = drops[x]
-            if y > 0:
-                for dy in range(min(15, y)):
-                    intensity = max(0, 255 - dy * 18)
-                    if intensity > 200:
-                        color = "\033[92m"  # Xanh sáng
-                    elif intensity > 100:
-                        color = "\033[32m"  # Xanh vừa
-                    else:
-                        color = "\033[90m"  # Xanh tối
-                    char = random.choice(chars) if dy == 0 else frame[height - y + dy][x]
-                    frame[height - y + dy][x] = f"{color}{char}\033[0m"
-        return '\n'.join(''.join(row) for row in frame)
-
-    # Progress bar giả lập hack
-    hacking_status = {}
     progress_queue = Queue()
+    hacking_status = {}
 
-    def fake_hack_thread():
+    def fake_hack():
         tasks = [
-            ("Scanning network...", 20),
-            ("Brute force SSH...", 25),
-            ("Injecting rootkit...", 18),
+            ("Scanning ports...", 18),
+            ("Cracking password...", 22),
+            ("Bypassing firewall...", 20),
             ("Access granted!", 15),
         ]
         for name, steps in tasks:
             for i in range(steps):
-                time.sleep(0.15)
+                time.sleep(0.12)
                 progress_queue.put(("update", name, i+1, steps))
-            progress_queue.put(("complete", name))
+            progress_queue.put(("done", name))
 
-    threading.Thread(target=fake_hack_thread, daemon=True).start()
+    threading.Thread(target=fake_hack, daemon=True).start()
 
     try:
         while True:
-            update_drops()
-            print(f"\033[H{draw()}")
-            
-            # Hiển thị progress bar
+            # Cập nhật giọt
+            for i in range(width):
+                if drops[i] <= 0 or random.random() < 0.075:
+                    drops[i] = random.randint(5, height)
+                drops[i] -= 1
+
+            # Vẽ khung
+            frame = [[' ' for _ in range(width)] for _ in range(height)]
+            for x in range(width):
+                y = height - drops[x]
+                if y >= 0:
+                    trail = min(15, drops[x])
+                    for dy in range(trail):
+                        intensity = max(0, 255 - dy * 17)
+                        if intensity > 200:
+                            color = "\033[92m"  # sáng
+                        elif intensity > 100:
+                            color = "\033[32m"  # trung
+                        else:
+                            color = "\033[90m"  # tối
+                        char = random.choice(chars) if dy == 0 else frame[y + dy][x]
+                        frame[y + dy][x] = f"{color}{char}\033[0m"
+
+            # In màn hình
+            output = '\n'.join(''.join(row) for row in frame)
+            print(f"\033[H{output}")
+
+            # Progress bar
+            lines = []
             while not progress_queue.empty():
                 msg = progress_queue.get()
-                if msg[0] == "complete":
-                    hacking_status[msg[1]] = "DONE"
-                elif msg[0] == "update":
+                if msg[0] == "update":
                     name, cur, total = msg[1], msg[2], msg[3]
                     bar = "█" * cur + "░" * (total - cur)
-                    print(f"\n\033[91m┌─ HACKING SYSTEM ─┐\033[0m")
-                    print(f"│ {name}")
-                    print(f"│ [{bar}] {cur}/{total}")
-                    print(f"└{'─'*18}┘\033[0m")
+                    lines.append(f"\033[91m┃ {name}")
+                    lines.append(f"┃ [{bar}] {cur}/{total}")
+                elif msg[0] == "done":
+                    hacking_status[msg[1]] = "DONE"
+
+            if lines:
+                print("\n\033[91m┌─ HACKING IN PROGRESS ─┐\033[0m")
+                for line in lines[-4:]:
+                    print(line)
+                print("└" + "─" * 22 + "┘\033[0m")
 
             time.sleep(0.1)
+
     except KeyboardInterrupt:
-        print("\033[?25h\033[0m")  # Hiện lại con trỏ
-        print("Hacker logged out.")
+        print("\033[?25h\033[0m")
+        print("\n\033[91mHacker disconnected. Trace erased.\033[0m")
         sys.exit()
 
-# ====================== MODE: PC PYGAME 3D ======================
-def run_pygame_matrix():
-    # === TOÀN BỘ CODE PYGAME TỪ BẢN TRƯỚC (đã tối ưu) ===
+# ====================== CHẾ ĐỘ PC: PYGAME 3D ======================
+# Import pygame ở đây để tránh lỗi khi không có GUI
+try:
     import pygame
     import numpy as np
     from pygame.locals import *
+    PYGAME_AVAILABLE = True
+except:
+    PYGAME_AVAILABLE = False
+
+def run_pygame_matrix():
+    if not PYGAME_AVAILABLE:
+        print("Pygame không khả dụng!")
+        return
 
     pygame.init()
     WIDTH, HEIGHT = 1400, 900
     screen = pygame.display.set_mode((WIDTH, HEIGHT), RESIZABLE)
-    pygame.display.set_caption("MATRIX PRO MAX - PC MODE")
+    pygame.display.set_caption("MATRIX PRO - PC MODE")
     clock = pygame.time.Clock()
 
-    # Font & Màu
-    FONT_BIG = pygame.font.SysFont('consolas', 28, bold=True)
-    FONT_MED = pygame.font.SysFont('courier', 20, bold=True)
+    FONT_BIG = pygame.font.SysFont('consolas', 30, bold=True)
     chars = list("01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン")
 
-    # 3D Drop class (gọn hơn)
     class Drop3D:
         def __init__(self, x, z=0):
             self.x, self.y, self.z = x, random.randint(-1000, -100), z
@@ -163,12 +201,12 @@ def run_pygame_matrix():
             if opacity < 50: return
             for i, char in enumerate(self.chars):
                 y_pos = self.y - i * 28 * scale
-                if y_pos < -50 or y_pos > HEIGHT + 50: continue
-                x_offset = self.x + np.sin(time.time() + i) * 10 * scale
-                size = int(20 * scale)
-                color = (0, min(255, opacity), 0)
-                text = pygame.font.SysFont('courier', size, bold=True).render(char, True, color)
-                surf.blit(text, (x_offset - text.get_width()//2, y_pos - text.get_height()//2))
+                if -50 < y_pos < HEIGHT + 50:
+                    x_offset = self.x + np.sin(time.time() + i) * 10 * scale
+                    size = int(20 * scale)
+                    color = (0, min(255, opacity), 0)
+                    text = pygame.font.SysFont('courier', size, bold=True).render(char, True, color)
+                    surf.blit(text, (x_offset - text.get_width()//2, y_pos - text.get_height()//2))
 
     drops = [Drop3D(x + random.randint(-15,15), z) for x in range(0, WIDTH, 30) for z in [0, 300, 600]]
     fade = pygame.Surface((WIDTH, HEIGHT), SRCALPHA)
@@ -183,13 +221,15 @@ def run_pygame_matrix():
         for event in pygame.event.get():
             if event.type == QUIT:
                 running = False
-            if event.type == KEYDOWN and event.key == K_F11:
-                global screen, WIDTH, HEIGHT
-                if screen.get_flags() & FULLSCREEN:
-                    screen = pygame.display.set_mode((1400,900), RESIZABLE)
-                else:
-                    screen = pygame.display.set_mode((0,0), FULLSCREEN)
-                WIDTH, HEIGHT = screen.get_size()
+            if event.type == KEYDOWN:
+                if event.key == K_F11:
+                    global WIDTH, HEIGHT
+                    flags = screen.get_flags()
+                    if flags & FULLSCREEN:
+                        screen = pygame.display.set_mode((1400,900), RESIZABLE)
+                    else:
+                        screen = pygame.display.set_mode((0,0), FULLSCREEN)
+                    WIDTH, HEIGHT = screen.get_size()
 
         screen.blit(fade, (0, 0))
         for drop in drops:
@@ -201,7 +241,7 @@ def run_pygame_matrix():
             int(127 + 128 * np.sin(rainbow_phase + 2)),
             int(127 + 128 * np.sin(rainbow_phase + 4))
         )
-        title = FONT_BIG.render("MATRIX PRO MAX - PC", True, title_color)
+        title = FONT_BIG.render("MATRIX PRO - PC MODE", True, title_color)
         screen.blit(title, (WIDTH//2 - title.get_width()//2, 15))
 
         pygame.display.flip()
@@ -209,17 +249,15 @@ def run_pygame_matrix():
     pygame.quit()
     sys.exit()
 
-# ====================== CHẠY CHẾ ĐỘ PHÙ HỢP ======================
+# ====================== CHẠY CHƯƠNG TRÌNH ======================
 if __name__ == "__main__":
-    print(f"[+] Phát hiện: {platform.system()} | GUI: {env['has_gui']} | Termux: {env['is_termux']}")
+    env = detect_environment()
 
     if env['is_termux'] or (env['is_mobile'] and not env['has_gui']):
-        print("Điện thoại/Termux phát hiện → Chuyển sang chế độ ASCII!")
-        run_termux_matrix()
+        print("\033[91mChuyển sang chế độ TERMUX ASCII MATRIX...\033[0m")
+        time.sleep(1.5)
+        run_ascii_matrix()
     else:
-        print("Máy tính phát hiện → Chạy Matrix 3D Pro Max!")
-        try:
-            run_pygame_matrix()
-        except Exception as e:
-            print(f"GUI lỗi: {e}\n→ Chuyển về chế độ ASCII!")
-            run_termux_matrix()
+        print("\033[92mKhởi chạy MATRIX 3D PRO trên PC...\033[0m")
+        time.sleep(1.5)
+        run_pygame_matrix()
